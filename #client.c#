@@ -4,8 +4,6 @@
 #include <sys/types.h>
 #include <pthread.h>
 
-<<<<<<< HEAD
-
 int main()
 {
 	int parent,pid1, pid2, pid3;
@@ -20,13 +18,12 @@ int main()
 	pipefd2[1] = -1;
 	pipefd3[1] = -1;
 
-=======
-struct sockaddr_in DSS_Addr, DataSub1, DataSub2, DataSub3;
-int controlfd, child1, child2, child3;
-int control_port = 9082;
 
-int main()
-{
+	 struct sockaddr_in DSS_Addr, DataSub1, DataSub2, DataSub3;
+	 int controlfd, child1, child2, child3;
+	 int control_port = 9082;
+
+
 	//form control socket 
 	if ( (controlfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) 
 		{
@@ -48,16 +45,11 @@ int main()
 
 	//establish and fork 3 connections so each process is a TCP subflow
 
-	int conn1, conn2, conn3;
-	pid_t parent, id1, id2, id3;
-	
->>>>>>> c14f4644e16c8318e89fa6679b225d40c87a59d3
 	parent = getpid();
 	// ctrl conn
 
 
 	// make conn1 
-<<<<<<< HEAD
 	if(fork() == 0)
 	{
 		pid1 = getpid();
@@ -73,26 +65,6 @@ int main()
 			if(fork() == 0)
 			{
 				pid3 = getpid();
-=======
-	id1 = fork();
-	if(id1 == 0)
-	{
-		conn1 = getpid();
-	}	
-	else
-	{	// make conn2 
-		id2 = fork();
-		if(id2 == 0)
-		{
-			conn2 = getpid();
-		}	
-		else
-		{	// make conn3 
-			id3 = fork();
-			if(id3 == 0)
-			{
-				conn3 = getpid();
->>>>>>> c14f4644e16c8318e89fa6679b225d40c87a59d3
 			}	
 		}
 	}
@@ -102,7 +74,6 @@ int main()
 		int currentProcess = getpid();
 		if(currentProcess == parent)
 		{
-<<<<<<< HEAD
 			//printf("parent %d\n", currentProcess);
 			pipefd1[1] = 56;
 			pipefd2[1] = 46;
@@ -134,8 +105,7 @@ int main()
 				printf("c3 %d\n", pipefd3[0]);
 			}
 		} 
-		//break;
-=======
+
 			printf("parent %d\n", currentProcess);
 		}
 		else if(currentProcess == conn1){printf("c1 %d\n", currentProcess);} 
