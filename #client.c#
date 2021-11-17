@@ -78,6 +78,7 @@ int main()
 			pipefd1[1] = 56;
 			pipefd2[1] = 46;
 			pipefd3[1] = 36;
+			break;
 		}
 		else if(currentProcess == pid1)
 		{
@@ -86,6 +87,7 @@ int main()
 			if(pipefd1[0] != -1)
 			{
 				printf("c1 %d\n", pipefd1[0]);
+				break;
 			}
 			
 		} 
@@ -94,6 +96,7 @@ int main()
 			if(pipefd2[0] != -1)
 			{
 				printf("c2 %d\n", pipefd2[0]);
+				break;
 			}
 
 		} 
@@ -103,16 +106,10 @@ int main()
 			if(pipefd3[0] != -1)
 			{
 				printf("c3 %d\n", pipefd3[0]);
+				break;
 			}
 		} 
 
-			printf("parent %d\n", currentProcess);
-		}
-		else if(currentProcess == conn1){printf("c1 %d\n", currentProcess);} 
-		else if(currentProcess == conn2){printf("c2 %d\n", currentProcess);} 
-		else if(currentProcess == conn3){printf("c3 %d\n", currentProcess);} 
-		break;
->>>>>>> c14f4644e16c8318e89fa6679b225d40c87a59d3
 	}
 	
 	return 0;
