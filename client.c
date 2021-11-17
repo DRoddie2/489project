@@ -8,9 +8,12 @@
 #include <netinet/in.h>
 #include <sys/time.h>
 
-struct sockaddr_in DSS_Addr, DataSub1, DataSub2, DataSub3;
-int controlfd, child1, child2, child3;
+struct sockaddr_in DSS_Addr, DataSub1, DataSub2, DataSub3, ServSub1, ServSub2, ServSub3;
+int controlfd, child1, child2, child3, datafd1, datafd2, datafd3;
 int control_port = 9082;
+int data_port1 = 9083;
+int data_port2 = 9084;
+int data_port3 = 9085;
 char server_IP[20] = "192.168.254.8";
 int parent,pid1, pid2, pid3;
 int pipefd1[2], pipefd2[2], pipefd3[2];
@@ -39,6 +42,18 @@ int main()
 	DSS_Addr.sin_port = htons(control_port);
 	DSS_Addr.sin_addr.s_addr = inet_addr(server_IP);
 
+	DataSub1.sin_family = AF_INET;
+	DataSub1.sin_port = htons(data_port1);
+	DataSub1.sin_addr.s_addr = inet_addr(server_IP);
+
+	DataSub2.sin_family = AF_INET;
+	DataSub2.sin_port = htons(data_port2);
+	DataSub2.sin_addr.s_addr = inet_addr(server_IP);
+
+	DataSub3.sin_family = AF_INET;
+	DataSub3.sin_port = htons(data_port3);
+	DataSub3.sin_addr.s_addr = inet_addr(server_IP);
+
 	//establish "control" connection
 	if (connect(controlfd, (struct sockaddr *) &DSS_Addr, sizeof(DSS_Addr)) != 0) 
 	{
@@ -52,19 +67,34 @@ int main()
 	// ctrl conn
 
 
-	// make conn1 
+	// make connection to first data subflow 
+	if ((connect(datafd, (struct sockaddr *) &DataSub1, sizeof(DataSub1)) != 0)) 
+	{
+		perror("data connection with client failed");
+		exit(EXIT_FAILURE);
+	}
 	if(fork() == 0)
 	{
 		pid1 = getpid();
 	}	
 	else
-	{	// make conn2 
+	{	// make connection to second data subflow 
+		if ((connect(datafd, (struct sockaddr *) &DataSub2, sizeof(DataSub2)) != 0)) 
+		{
+			perror("data connection with client failed");
+			exit(EXIT_FAILURE);
+		} 
 		if(fork() == 0)
 		{
 			pid2 = getpid();
 		}	
 		else
-		{	// make conn3 
+		{	// make connection to third data subflow
+			if ((connect(datafd, (struct sockaddr *) &DataSub3, sizeof(DataSub3)) != 0)) 
+			{
+				perror("data connection with client failed");
+				exit(EXIT_FAILURE);
+			}
 			if(fork() == 0)
 			{
 				pid3 = getpid();

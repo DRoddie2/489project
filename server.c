@@ -6,8 +6,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-struct sockaddr_in DSS_ServAddr;
-int controlfd;
+struct sockaddr_in DSS_ServAddr, Client_Addr;
+int controlfd, ClientLen;
 int control_port = 9082;
 
 int main(int argc, char** argv)
@@ -36,5 +36,10 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);	
 	}
 	
-	// call accept()
+	acceptfd = accept(controlfd, (struct sockaddr *) &Client_Addr, &ClientLen); //accept creates a new socket for this connection
+	if(acceptfd == -1)
+	{
+		perror("accept failed");
+		exit(EXIT_FAILURE);
+	}
 }
