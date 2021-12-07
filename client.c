@@ -7,94 +7,86 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/time.h>
+#include "util.h"
+
+#define SERVER_IP "127.0.0.1"
 
 struct sockaddr_in DSS_Addr, DataSub1, DataSub2, DataSub3, ServSub1, ServSub2, ServSub3;
-int controlfd, child1, child2, child3, datafd1, datafd2, datafd3;
-int control_port = 9082;
-int data_port1 = 9083;
-int data_port2 = 9084;
-int data_port3 = 9085;
-char server_IP[20] = "192.168.254.8";
-int parent,pid1, pid2, pid3;
-int pipefd1[2], pipefd2[2], pipefd3[2];
+int controlfd, subflow1, subflow2, subflow3, datafd1, datafd2, datafd3;
+int parent, pid1, pid2, pid3;
+int cp1[2], cp2[2], cp3[2];
+char bytes[992];
+
+/* Helper fun'n for generating the */
+void generateBytes()
+{
+	char subMsg[62] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+	int i, j;
+	for(i = 0; i < 16; i++)
+	{
+		int base = i * 62;
+		for(j = 0; j < 62; j++)
+		{
+			bytes[base + j] = subMsg[j];
+		}
+	} 
+}
 
 int main()
 {
+	/* init variables */
+	Set logData[248];
+	int subSeqNum1, subSeqNum2, subSeqNum3; // updated by child processes
+	int sub1, sub2, sub3, last1, last2, last3; // used by parent process to track subsequence #
 
-	// init pipes
-	pipe(pipefd1[2]);
-	pipe(pipefd2[2]);
-	pipe(pipefd3[2]);
+	subSeqNum1 = 0; // counting starts at 0
+	subSeqNum2 = 0;
+	subSeqNum3 = 0;
+	last1 = 0;
+	last2 = 0;
+	last3 = 0;
 
-	pipefd1[1] = -1;
-	pipefd2[1] = -1;
-	pipefd3[1] = -1;
+	parent = getpid(); 
+	generateBytes(); // fill bytes array
 
-	//form control socket 
-	if ( (controlfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) 
-		{
-        		perror("socket creation failed");
-        		exit(EXIT_FAILURE);
-    		}
+	/* initalize pipes for communication b/w parent and children */
+	initPipes(cp1, cp2, cp3);
+	write(cp1, "0", MSGSIZE);
+	write(cp2, "0", MSGSIZE);
+	write(cp3, "0", MSGSIZE);
 
-	//form address
-	DSS_Addr.sin_family = AF_INET;
-	DSS_Addr.sin_port = htons(control_port);
-	DSS_Addr.sin_addr.s_addr = inet_addr(server_IP);
+	/* initalize sockets for the control and 3 subflow connections */
+	initSocket(&controlfd);
+	initSocket(&subflow1);
+	initSocket(&subflow2);
+	initSocket(&subflow3);
 
-	DataSub1.sin_family = AF_INET;
-	DataSub1.sin_port = htons(data_port1);
-	DataSub1.sin_addr.s_addr = inet_addr(server_IP);
+	/* form addresses for the control and 3 subflow connections */
+	formClientAddress(&DSS_Addr, SERVER_IP, control_port);
+	formClientAddress(&DataSub1, SERVER_IP, data_port1);
+	formClientAddress(&DataSub2, SERVER_IP, data_port2);
+	formClientAddress(&DataSub3, SERVER_IP, data_port3);
 
-	DataSub2.sin_family = AF_INET;
-	DataSub2.sin_port = htons(data_port2);
-	DataSub2.sin_addr.s_addr = inet_addr(server_IP);
+	/* connect the control and 3 subflow sockets to the server*/
+	connectSocket(&controlfd, &DSS_Addr, sizeof(DSS_Addr), "ctrl conn failed");
+	connectSocket(&subflow1, &DataSub1, sizeof(DataSub1), "subflow1 conn failed");
+	connectSocket(&subflow2, &DataSub2, sizeof(DataSub2), "subflow2 conn failed");
+	connectSocket(&subflow3, &DataSub3, sizeof(DataSub3), "subflow3 conn failed");
 
-	DataSub3.sin_family = AF_INET;
-	DataSub3.sin_port = htons(data_port3);
-	DataSub3.sin_addr.s_addr = inet_addr(server_IP);
-
-	//establish "control" connection
-	if (connect(controlfd, (struct sockaddr *) &DSS_Addr, sizeof(DSS_Addr)) != 0) 
-	{
-		perror("connection with server failed");
-		exit(EXIT_FAILURE);	
-	}
-
-	//establish and fork 3 connections so each process is a TCP subflow
-	
-	parent = getpid();
-	// ctrl conn
-
-
-	// make connection to first data subflow 
-	if ((connect(datafd, (struct sockaddr *) &DataSub1, sizeof(DataSub1)) != 0)) 
-	{
-		perror("data connection with client failed");
-		exit(EXIT_FAILURE);
-	}
+	/* fork child processes 1,2,3 and store process id numbers */
 	if(fork() == 0)
 	{
 		pid1 = getpid();
 	}	
 	else
-	{	// make connection to second data subflow 
-		if ((connect(datafd, (struct sockaddr *) &DataSub2, sizeof(DataSub2)) != 0)) 
-		{
-			perror("data connection with client failed");
-			exit(EXIT_FAILURE);
-		} 
+	{	
 		if(fork() == 0)
 		{
 			pid2 = getpid();
 		}	
 		else
-		{	// make connection to third data subflow
-			if ((connect(datafd, (struct sockaddr *) &DataSub3, sizeof(DataSub3)) != 0)) 
-			{
-				perror("data connection with client failed");
-				exit(EXIT_FAILURE);
-			}
+		{	
 			if(fork() == 0)
 			{
 				pid3 = getpid();
@@ -105,45 +97,133 @@ int main()
 	for(;;)
 	{
 		int currentProcess = getpid();
+
 		if(currentProcess == parent)
 		{
-			//printf("parent %d\n", currentProcess);
-			pipefd1[1] = 56;
-			pipefd2[1] = 46;
-			pipefd3[1] = 36;
-			break;
+			char recStr[1000];
+			char sendStr[MSGSIZE];
+
+			read(cp1[0], recStr, 1000);
+			sub1 = atoi(recStr);
+			while((sub1 - last1) > 0)
+			{
+				int mappedSeq = last1*3;
+				sprintf(sendStr, "%d", mappedSeq);
+				write(controlfd, sendStr, MSGSIZE);
+				
+				last1++;
+				
+			} 
+			
+
+			read(cp2[0], recStr, MSGSIZE);
+			sub2 = atoi(recStr);
+			while((sub2 - last2) > 0)
+			{
+				int mappedSeq = last2*3 + 1;
+				sprintf(sendStr, "%d", mappedSeq);
+				write(controlfd, sendStr, MSGSIZE); 
+				
+				sleep(0.1);
+				last2++;
+				
+			} 
+
+			read(cp3[0], recStr, MSGSIZE);
+			sub3 = atoi(recStr);
+			while((sub3 - last3) > 0)
+			{
+				int mappedSeq = last3*3 + 2;
+				sprintf(sendStr, "%d", mappedSeq);
+				write(controlfd, sendStr, MSGSIZE);
+			
+				sleep(0.1);
+				last3++;
+				
+			} 
+			if(last1 >= 83 && last2 >= 83 && last3 >= 82) break;				
+			
 		}
 		else if(currentProcess == pid1)
 		{
-	
-
-			if(pipefd1[0] != -1)
+			// build msg
+			if(subSeqNum1 >= 83) break;	
+			char msg[MSGSIZE];
+			int idx = subSeqNum1 * 12;
+			sprintf(msg, "%c%c%c%c\0", bytes[idx], bytes[idx+1], bytes[idx+2], bytes[idx+3]);
+		
+			// send msg
+			if(write(subflow1, msg, 1000) < 0)
 			{
-				printf("c1 %d\n", pipefd1[0]);
-				break;
+				perror("read failed");
+				exit(1);
 			}
-			
+
+
+			// tell parent msg was sent & update seq number
+			subSeqNum1++;
+			char cpStr[MSGSIZE];
+			sprintf(cpStr, "%d", subSeqNum1);
+			write(cp1[1], cpStr, MSGSIZE);		
 		} 
 		else if(currentProcess == pid2)
-		{			
-			if(pipefd2[0] != -1)
+		{
+			if(subSeqNum2 >= 83) break;	
+	
+			// build msg
+			char msg[MSGSIZE];
+			int idx = subSeqNum2 * 12 + 4;
+			sprintf(msg, "%c%c%c%c\0", bytes[idx], bytes[idx+1], bytes[idx+2], bytes[idx+3]);
+
+			// send msg
+			if(write(subflow2, msg, 1000) < 0)
 			{
-				printf("c2 %d\n", pipefd2[0]);
-				break;
+				perror("read failed");
+				exit(1);
 			}
 
+			// tell parent msg was sent & update seq number
+			subSeqNum2++;
+			char cpStr[MSGSIZE];
+			sprintf(cpStr, "%d", subSeqNum2);
+			write(cp2[1], cpStr, MSGSIZE);
+			
 		} 
 		else if(currentProcess == pid3)
 		{
-
-			if(pipefd3[0] != -1)
+			// build msg
+			if(subSeqNum3 >= 82) break;	
+			char msg[MSGSIZE];
+			int idx = subSeqNum3 * 12 + 8;
+			sprintf(msg, "%c%c%c%c\0", bytes[idx], bytes[idx+1], bytes[idx+2], bytes[idx+3]);
+			
+			// send msg
+			if(write(subflow3, msg, 1000) < 0)
 			{
-				printf("c3 %d\n", pipefd3[0]);
-				break;
+				perror("read failed");
+				exit(1);
 			}
-		} 
 
+			// tell parent msg was sent & update seq number
+			subSeqNum3++;
+			char cpStr[MSGSIZE];
+			sprintf(cpStr, "%d", subSeqNum3);
+			write(cp3[1], cpStr, MSGSIZE);
+		} 
+		
 	}
-	
+
+	/* print final buffer and log */
+	if(getpid() == parent)
+	{
+ 		printf("\nMessage Sent\n\n%s\n\n", bytes);
+		printf("Client Side - Sequence Number Log\n\n");
+		printLog(logData, 248);
+	}
+
+	close(controlfd);
+	close(datafd1);
+	close(datafd2);
+	close(datafd3);
 	return 0;
 }
