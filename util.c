@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/time.h>
+#include <fcntl.h>        
 #include "util.h"
 
 void insertData(char* dest, int insertIdx, char* source, int readIdx, int size)
@@ -20,8 +21,29 @@ void insertData(char* dest, int insertIdx, char* source, int readIdx, int size)
 	}
 }
 
-void printLog(Set* logData, int size)
+void insertLogEntry(Set* logData, int gblseq, int subseq, int sub)
 {
+	Set* entry = logData + gblseq;
+	entry->gblseq = gblseq;
+	entry->subseq = subseq;
+	entry->sub = sub;
+}
+
+void printLog(Set* logData, int size, char* bytes)
+{
+	char data[5];
+	data[4] = '\0';
+	printf("Global\tSubflow\tSubseq\tData\n");
+
+	int i, idx;
+	for(i = 0; i < size; i++)
+	{
+		Set* temp = logData + i;
+		idx =  temp->gblseq*4;
+		insertData(data, 0, bytes, idx, 4);
+		printf("%d\t%d\t%d\t%s\n", temp->gblseq, temp->sub, temp->subseq, data);
+	}
+
 }
 
 void printBuffer(char* buffer) 

@@ -1,13 +1,14 @@
 
-#define control_port 9997
-#define data_port1 9998
-#define data_port2 9999
-#define data_port3 10000
+#define control_port 9897
+#define data_port1 9898
+#define data_port2 9899
+#define data_port3 10001
 #define MSGSIZE 1000
 
 struct Set{
 	int gblseq;
 	int subseq;
+	int sub;
 	char data[5];
 };
 typedef struct Set Set;
@@ -26,8 +27,9 @@ void acceptConnection(int* listeningSckt, int* acceptingSckt, struct sockaddr_in
 /* inserting data from source char array to destination char array */
 void insertData(char* dest, int insertIdx, char* source, int readIdx, int size);
 
-/* print the log */
-void printLog(Set* logData, int size);
+/* managing the log */
+void insertLogEntry(Set* logData, int gblseq, int subseq, int sub);
+void printLog(Set* logData, int size, char* bytes);
 
 /* helper fun'n for printing a char buffer */
 void printBuffer(char* buffer) ;

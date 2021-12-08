@@ -91,16 +91,16 @@ int main(int argc, char** argv)
 			
 
 			/* get gbl sequence # from dss connection, map it to a sub sequence  #
-				then translate each to an index within the parent & child buffers */
+			then translate each to an index within the parent & child buffers */
 			if(read(acceptfd, rcvDSS, MSGSIZE) < 0)
 			{
 				perror("read dss failed");
 				exit(1);
 			}
 			mappedSeq = atoi(rcvDSS);
-
+			subSeq = mappedSeq / 3;
 			mainIdx = mappedSeq*4; // start index of where the data belongs in the buffer
-			subIdx = (mappedSeq / 3)*4; // start index of where the child reads data from
+			subIdx = subSeq*4; // start index of where the child reads data from
 			sprintf(reqData, "%d", subIdx);
 
 			/* map to a subflow then request data from child and recieve it */
@@ -132,8 +132,9 @@ int main(int argc, char** argv)
 				}
 			}
 
-			/* insert data into main buffer*/
+			/* insert data into main buffer + log mapping */
 			insertData(mainBuffer, mainIdx, recData, 0, 4);
+			insertLogEntry(logData, mappedSeq, subSeq, (mappedSeq%3+1));
 
 			if(mappedSeq >= 247)
 			{ 
@@ -244,9 +245,9 @@ int main(int argc, char** argv)
 	/* print final buffer and log */
 	if(getpid() == parent)
 	{
- 		printf("\nMessage Recieved\n\n%s\n\n", mainBuffer);
 		printf("Server Side - Sequence Number Log\n\n");
-		printLog(logData, 248);
+		printLog(logData, 248, mainBuffer);
+ 		printf("\nMessage Recieved\n\n%s\n\n", mainBuffer);
 	}
 
 	close(controlfd);
